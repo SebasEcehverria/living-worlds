@@ -15,6 +15,10 @@ app.use(express.json());
 const saveRoutes = require('./routes/saves');
 app.use('/api/saves', saveRoutes);
 
+// NPC routes
+const npcRoutes = require('./routes/npcs');
+app.use('/api/npcs', npcRoutes);
+
 // Home route
 app.get('/', (req, res) => {
   res.json({

@@ -1,19 +1,27 @@
 
 import { useEffect, useState } from 'react'
+import Village from './pages/Village'
 import './App.css'
 
 function App() {
+  // Player information
   const [playerName, setPlayerName] = useState('')
   const [showNewGame, setShowNewGame] = useState(false)
+
+  // Backend connection
   const [serverStatus, setServerStatus] = useState('Connecting...')
+
+  // Game save information
   const [gameSave, setGameSave] = useState(null)
   const [hasSavedGame, setHasSavedGame] = useState(
     Boolean(localStorage.getItem('livingWorldsSaveId'))
   )
+
+  // Loading and error states
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Check backend connection
+  // Check backend and MongoDB connection
   useEffect(() => {
     const checkServer = async () => {
       try {
@@ -25,11 +33,12 @@ function App() {
 
         const data = await response.json()
 
-        setServerStatus(
-          data.status === 'ok' && data.database === 'connected'
-            ? 'Online'
-            : 'Offline'
-        )
+        if (data.status === 'ok' && data.database === 'connected') {
+          setServerStatus('Online')
+          console.log('Living Worlds backend connected!')
+        } else {
+          setServerStatus('Offline')
+        }
       } catch (error) {
         console.error('Backend connection failed:', error)
         setServerStatus('Offline')
@@ -39,7 +48,7 @@ function App() {
     checkServer()
   }, [])
 
-  // Create a new MongoDB game save
+  // Create a new adventure in MongoDB
   const startAdventure = async (e) => {
     e.preventDefault()
 
@@ -65,7 +74,7 @@ function App() {
 
       const data = await response.json()
 
-      // Remember the MongoDB save ID
+      // Remember the saved game's ID
       localStorage.setItem('livingWorldsSaveId', data._id)
 
       setGameSave(data)
@@ -74,19 +83,19 @@ function App() {
 
       console.log('Adventure created:', data)
     } catch (error) {
-      console.error(error)
-      setError('Could not create your adventure. Try again.')
+      console.error('Create adventure error:', error)
+      setError('Could not create your adventure. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  // Load an existing adventure
+  // Continue an existing MongoDB adventure
   const continueAdventure = async () => {
     const saveId = localStorage.getItem('livingWorldsSaveId')
 
     if (!saveId) {
-      setError('No saved adventure found.')
+      setError('No saved adventure was found.')
       return
     }
 
@@ -105,22 +114,37 @@ function App() {
       setGameSave(data)
       console.log('Adventure loaded:', data)
     } catch (error) {
-      console.error(error)
+      console.error('Load adventure error:', error)
       setError('Could not load your saved adventure.')
     } finally {
       setLoading(false)
     }
   }
 
-  // Return to main menu
+  // Return to the main menu without deleting the game
   const returnToMenu = () => {
     setGameSave(null)
     setShowNewGame(false)
     setError('')
   }
 
+  // Display the Village when an adventure is active
+  if (gameSave) {
+    return (
+      <div className="app">
+        <Village
+          gameSave={gameSave}
+          onReturnToMenu={returnToMenu}
+        />
+      </div>
+    )
+  }
+
+  // Display the main menu
   return (
     <div className="app">
+
+      {/* Navigation Bar */}
       <header className="navbar">
         <div className="logo">⚔ Living Worlds</div>
 
@@ -140,141 +164,112 @@ function App() {
         </div>
       </header>
 
+      {/* Main Menu */}
       <main className="main-menu">
         <div className="menu-content">
 
-          {!gameSave ? (
-            <>
-              <p className="eyebrow">
-                AN AI-POWERED FANTASY ADVENTURE
-              </p>
+          <p className="eyebrow">
+            AN AI-POWERED FANTASY ADVENTURE
+          </p>
 
-              <h1>
-                LIVING <span>WORLDS</span>
-              </h1>
+          <h1>
+            LIVING <span>WORLDS</span>
+          </h1>
 
-              <h2>The Talking Village</h2>
+          <h2>The Talking Village</h2>
 
-              <div className="ornament">
-                ✦ ─────── ✦ ─────── ✦
-              </div>
+          <div className="ornament">
+            ✦ ─────── ✦ ─────── ✦
+          </div>
 
-              <p className="description">
-                Beyond the mist lies a village filled with secrets,
-                forgotten legends, and characters who remember your story.
-                Every conversation shapes your adventure.
-              </p>
+          <p className="description">
+            Beyond the mist lies a village filled with secrets,
+            forgotten legends, and characters who remember your story.
+            Every conversation shapes your adventure.
+          </p>
 
-              {!showNewGame ? (
-                <div className="menu-buttons">
-                  <button
-                    className="primary-button"
-                    onClick={() => {
-                      setError('')
-                      setShowNewGame(true)
-                    }}
-                  >
-                    ⚔ Begin Adventure
-                  </button>
+          {!showNewGame ? (
+            <div className="menu-buttons">
 
-                  <button
-                    className="secondary-button"
-                    onClick={continueAdventure}
-                    disabled={!hasSavedGame || loading}
-                  >
-                    {loading ? 'Loading...' : 'Continue Adventure'}
-                  </button>
-                </div>
-              ) : (
-                <form className="new-game" onSubmit={startAdventure}>
-                  <h3>Create Your Character</h3>
+              {/* Start New Game */}
+              <button
+                className="primary-button"
+                onClick={() => {
+                  setError('')
+                  setShowNewGame(true)
+                }}
+              >
+                ⚔ Begin Adventure
+              </button>
 
-                  <input
-                    type="text"
-                    placeholder="Enter your character name"
-                    value={playerName}
-                    onChange={(e) => setPlayerName(e.target.value)}
-                    maxLength={30}
-                    required
-                    disabled={loading}
-                  />
-
-                  <button
-                    className="primary-button"
-                    type="submit"
-                    disabled={loading}
-                  >
-                    {loading ? 'Creating Adventure...' : 'Enter the Village'}
-                  </button>
-
-                  <button
-                    className="back-button"
-                    type="button"
-                    onClick={() => setShowNewGame(false)}
-                  >
-                    ← Back
-                  </button>
-                </form>
-              )}
-
-              {error && <p className="error-message">{error}</p>}
-            </>
-          ) : (
-            <div className="adventure-screen">
-              <p className="eyebrow">YOUR ADVENTURE BEGINS</p>
-
-              <h1>Welcome, <span>{gameSave.playerName}</span></h1>
-
-              <div className="ornament">
-                ✦ ─────── ✦ ─────── ✦
-              </div>
-
-              <p className="description">
-                You arrive at the gates of a mysterious village.
-                The morning mist drifts between ancient stone buildings.
-                Somewhere nearby, a merchant calls out to passing travelers.
-              </p>
-
-              <div className="player-card">
-                <h3>⚔ Character Information</h3>
-
-                <p>
-                  <strong>Name:</strong> {gameSave.playerName}
-                </p>
-
-                <p>
-                  <strong>Location:</strong> {gameSave.location}
-                </p>
-
-                <p>
-                  <strong>Quest:</strong> {gameSave.questStatus}
-                </p>
-
-                <p>
-                  <strong>Inventory:</strong> {gameSave.inventory.length} items
-                </p>
-              </div>
-
-              <p className="coming-soon">
-                The village awaits your arrival...
-              </p>
-
+              {/* Continue Existing Game */}
               <button
                 className="secondary-button"
-                onClick={returnToMenu}
+                onClick={continueAdventure}
+                disabled={!hasSavedGame || loading}
               >
-                ← Return to Main Menu
+                {loading ? 'Loading...' : 'Continue Adventure'}
               </button>
+
             </div>
+          ) : (
+
+            /* Character Creation */
+            <form
+              className="new-game"
+              onSubmit={startAdventure}
+            >
+              <h3>Create Your Character</h3>
+
+              <input
+                type="text"
+                placeholder="Enter your character name"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                maxLength={30}
+                required
+                disabled={loading}
+              />
+
+              <button
+                className="primary-button"
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? 'Creating Adventure...' : 'Enter the Village'}
+              </button>
+
+              <button
+                className="back-button"
+                type="button"
+                onClick={() => setShowNewGame(false)}
+              >
+                ← Back
+              </button>
+            </form>
+          )}
+
+          {/* Error Messages */}
+          {error && (
+            <p className="error-message">
+              {error}
+            </p>
           )}
 
         </div>
       </main>
 
+      {/* Footer */}
       <footer>
-        <p>Every character has a story. What will yours become?</p>
-        <span>CS333 Final Project • Sebastian Echeverria</span>
+        <p>
+          Every character has a story. What will yours become?
+        </p>
+
+        <span>
+          CS333 Final Project • Sebastian Echeverria
+        </span>
       </footer>
+
     </div>
   )
 }
