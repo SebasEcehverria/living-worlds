@@ -264,4 +264,58 @@ footer span {
       gap: 10px;
     }
   }
+
+  /* Adventure Screen */
+
+  .adventure-screen {
+    animation: fadeIn 0.8s ease-out;
+  }
+
+  .adventure-screen h1 {
+    font-size: clamp(36px, 6vw, 65px);
+  }
+
+  .player-card {
+    background: #152019;
+    border: 1px solid #b99a5166;
+    border-radius: 8px;
+    padding: 25px 35px;
+    margin: 35px auto;
+    max-width: 450px;
+    text-align: left;
+  }
+
+  .player-card h3 {
+    font-family: 'Cinzel', serif;
+    color: #d8b76b;
+    margin-top: 0;
+    border-bottom: 1px solid #b99a5144;
+    padding-bottom: 15px;
+  }
+
+  .player-card p {
+    color: #c3c8b8;
+    margin: 14px 0;
+  }
+
+  .player-card strong {
+    color: #d8b76b;
+  }
+
+  .coming-soon {
+    color: #c7a963;
+    font-family: 'Cinzel', serif;
+    font-style: italic;
+    margin-bottom: 30px;
+  }
+
+  .error-message {
+    color: #ff8585;
+    margin-top: 20px;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
 }
