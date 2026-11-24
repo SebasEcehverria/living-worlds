@@ -26,6 +26,19 @@ const gameSaveSchema = new mongoose.Schema(
       type: String,
       enum: ['not_started', 'active', 'completed'],
       default: 'not_started'
+    },
+
+    // Optional for compatibility with existing saves
+    questStep: {
+      type: String,
+      enum: [
+        'meet_elden',
+        'visit_garrick',
+        'visit_lyra',
+        'explore_shrine',
+        'return_to_elden',
+        'completed'
+      ]
     }
   },
   {

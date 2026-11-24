@@ -1,0 +1,136 @@
+
+/* Quest notifications */
+
+.quest-notification,
+.quest-error {
+  padding: 16px 20px;
+  margin-bottom: 25px;
+  border-radius: 7px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  line-height: 1.5;
+}
+
+.quest-notification {
+  background: #243d2c;
+  border: 1px solid #77a66f;
+  color: #c9edbb;
+}
+
+.quest-error {
+  background: #3d2424;
+  border: 1px solid #b96b6b;
+  color: #ffb4b4;
+}
+
+.quest-notification button,
+.quest-error button {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* Quest journal */
+
+.quest-name {
+  font-family: 'Cinzel', serif;
+  color: #e8dfca;
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+
+.quest-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.quest-step {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: #7d8d7d;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.quest-step.done {
+  color: #7fc58a;
+}
+
+.quest-step.current {
+  color: #d8b76b;
+  font-weight: 600;
+}
+
+/* NPC quest action button */
+
+.quest-chat-action {
+  padding: 14px 20px;
+  background: #17291d;
+  border-top: 1px solid #b99a5155;
+}
+
+.quest-chat-action button {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #d8b76b;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #d8b76b, #a98243);
+  color: #1d211a;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quest-chat-action button:hover {
+  background: #f0d38e;
+}
+
+.quest-chat-action button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Forest shrine */
+
+.forest-location {
+  margin-top: 25px;
+  padding: 30px;
+  background:
+    radial-gradient(circle at 50% 0%, #38674d, transparent 70%),
+    #12251d;
+  border: 1px solid #6c9479;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.forest-symbol {
+  font-size: 60px;
+}
+
+.forest-location h3 {
+  font-family: 'Cinzel', serif;
+  color: #d8b76b;
+  margin: 16px 0;
+}
+
+.forest-location p {
+  color: #c3c8b8;
+  line-height: 1.8;
+  max-width: 500px;
+  margin: 0 auto 22px;
+}
+
+.forest-location .primary-button {
+  max-width: 100%;
+}
+
+@media (max-width: 600px) {
+  .forest-location {
+    padding: 20px;
+  }
+}

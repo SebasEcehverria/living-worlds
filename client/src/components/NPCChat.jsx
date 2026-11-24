@@ -2,7 +2,36 @@
 import { useEffect, useRef, useState } from 'react'
 import './NPCChat.css'
 
-function NPCChat({ npc, gameSaveId, onClose }) {
+const npcActions = {
+  meet_elden: {
+    npc: 'Elden',
+    action: 'start',
+    label: '📜 Accept The Whispering Forest Quest'
+  },
+  visit_garrick: {
+    npc: 'Garrick',
+    action: 'get_map',
+    label: '🗺️ Receive Old Forest Map'
+  },
+  visit_lyra: {
+    npc: 'Lyra',
+    action: 'ranger_clearance',
+    label: '🏹 Ask Lyra for Forest Access'
+  },
+  return_to_elden: {
+    npc: 'Elden',
+    action: 'complete',
+    label: '🔮 Return the Ancient Relic'
+  }
+}
+
+function NPCChat({
+  npc,
+  gameSaveId,
+  questStep,
+  onQuestAction,
+  onClose
+}) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(true)
@@ -10,11 +39,16 @@ function NPCChat({ npc, gameSaveId, onClose }) {
   const [error, setError] = useState('')
 
   const messagesEndRef = useRef(null)
-
   const npcClass = npc.name.toLowerCase()
 
-  // Load previous messages
+  const availableAction = npcActions[questStep]
+  const canInteract =
+    availableAction?.npc === npc.name
+
+  // Load conversation history
   useEffect(() => {
+    let cancelled = false
+
     const loadHistory = async () => {
       setLoading(true)
       setError('')
@@ -25,36 +59,43 @@ function NPCChat({ npc, gameSaveId, onClose }) {
         )
 
         if (!response.ok) {
-          throw new Error('Could not load conversation')
+          throw new Error('Failed to load conversation')
         }
 
         const data = await response.json()
 
-        setMessages(data.messages || [])
-      } catch (error) {
-        console.error(error)
-        setError('Failed to load conversation history.')
+        if (!cancelled) {
+          setMessages(data.messages || [])
+        }
+      } catch (err) {
+        console.error(err)
+
+        if (!cancelled) {
+          setError('Could not load conversation history.')
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     loadHistory()
+
+    return () => {
+      cancelled = true
+    }
   }, [gameSaveId, npc._id])
 
-  // Scroll to newest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
       behavior: 'smooth'
     })
   }, [messages])
 
-  // Send a message
+  // Send AI conversation message
   const sendMessage = async (e) => {
     e.preventDefault()
 
     const text = input.trim()
-
     if (!text || sending || loading) return
 
     setSending(true)
@@ -68,33 +109,28 @@ function NPCChat({ npc, gameSaveId, onClose }) {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            message: text
-          })
+          body: JSON.stringify({ message: text })
         }
       )
 
       if (!response.ok) {
-        throw new Error('Failed to send message')
+        throw new Error('Message failed')
       }
 
       const data = await response.json()
 
       setMessages(data.messages)
       setInput('')
-    } catch (error) {
-      console.error(error)
-      setError('Message failed to send. Please try again.')
+    } catch (err) {
+      console.error(err)
+      setError('Could not send message. Try again.')
     } finally {
       setSending(false)
     }
   }
 
   return (
-    <div
-      className="chat-overlay"
-      onClick={onClose}
-    >
+    <div className="chat-overlay" onClick={onClose}>
       <div
         className="chat-window"
         role="dialog"
@@ -102,8 +138,6 @@ function NPCChat({ npc, gameSaveId, onClose }) {
         aria-label={`Conversation with ${npc.name}`}
         onClick={(e) => e.stopPropagation()}
       >
-
-        {/* Chat Header */}
         <div className="chat-header">
           <div className={`chat-avatar ${npcClass}`}>
             {npc.symbol}
@@ -123,9 +157,7 @@ function NPCChat({ npc, gameSaveId, onClose }) {
           </button>
         </div>
 
-        {/* Chat Messages */}
         <div className="chat-messages">
-
           {loading ? (
             <p className="chat-notice">
               Loading conversation...
@@ -135,9 +167,7 @@ function NPCChat({ npc, gameSaveId, onClose }) {
               {messages.length === 0 && (
                 <div className="chat-introduction">
                   <span>{npc.symbol}</span>
-
                   <h3>{npc.name}</h3>
-
                   <p>{npc.description}</p>
 
                   <div className="chat-greeting">
@@ -176,12 +206,23 @@ function NPCChat({ npc, gameSaveId, onClose }) {
           )}
         </div>
 
-        {/* Chat Error */}
         {error && (
           <p className="chat-error">{error}</p>
         )}
 
-        {/* Message Input */}
+        {/* Quest interaction */}
+        {canInteract && (
+          <div className="quest-chat-action">
+            <button
+              type="button"
+              disabled={sending || loading}
+              onClick={() => onQuestAction(availableAction.action)}
+            >
+              {availableAction.label}
+            </button>
+          </div>
+        )}
+
         <form
           className="chat-input-area"
           onSubmit={sendMessage}
@@ -202,7 +243,6 @@ function NPCChat({ npc, gameSaveId, onClose }) {
             {sending ? '...' : 'Send ➤'}
           </button>
         </form>
-
       </div>
     </div>
   )
