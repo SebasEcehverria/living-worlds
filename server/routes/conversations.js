@@ -5,18 +5,22 @@ const mongoose = require('mongoose');
 const Conversation = require('../models/Conversation');
 const GameSave = require('../models/GameSave');
 const NPC = require('../models/NPC');
+const SideQuest = require('../models/SideQuest');
 
 const { generateNPCResponse } = require('../services/qwen');
+const { discoverQuest } = require('../services/questDiscovery');
 
 const router = express.Router();
 
-// Verify both IDs and retrieve the associated records
 async function getGameAndNPC(saveId, npcId) {
   if (
     !mongoose.isValidObjectId(saveId) ||
     !mongoose.isValidObjectId(npcId)
   ) {
-    return { error: 'Invalid game save or NPC ID.', status: 400 };
+    return {
+      error: 'Invalid game save or NPC ID.',
+      status: 400
+    };
   }
 
   const [gameSave, npc] = await Promise.all([
@@ -35,7 +39,7 @@ async function getGameAndNPC(saveId, npcId) {
   return { gameSave, npc };
 }
 
-// GET conversation history
+// GET conversation history and discovered quests
 router.get('/:saveId/:npcId', async (req, res) => {
   try {
     const { saveId, npcId } = req.params;
@@ -48,20 +52,24 @@ router.get('/:saveId/:npcId', async (req, res) => {
       });
     }
 
-    const conversation = await Conversation.findOne({
-      gameSaveId: saveId,
-      npcId
-    });
-
-    if (!conversation) {
-      return res.json({
+    const [conversation, quests] = await Promise.all([
+      Conversation.findOne({
         gameSaveId: saveId,
-        npcId,
-        messages: []
-      });
-    }
+        npcId
+      }),
 
-    res.json(conversation);
+      SideQuest.find({
+        gameSaveId: saveId,
+        npcId
+      })
+    ]);
+
+    res.json({
+      gameSaveId: saveId,
+      npcId,
+      messages: conversation?.messages || [],
+      quests
+    });
   } catch (error) {
     console.error('Conversation retrieval error:', error);
 
@@ -77,7 +85,6 @@ router.post('/:saveId/:npcId/messages', async (req, res) => {
     const { saveId, npcId } = req.params;
     const { message } = req.body || {};
 
-    // Validate player message
     if (
       typeof message !== 'string' ||
       !message.trim() ||
@@ -88,7 +95,6 @@ router.post('/:saveId/:npcId/messages', async (req, res) => {
       });
     }
 
-    // Validate game save and NPC
     const result = await getGameAndNPC(saveId, npcId);
 
     if (result.error) {
@@ -98,8 +104,8 @@ router.post('/:saveId/:npcId/messages', async (req, res) => {
     }
 
     const { gameSave, npc } = result;
+    const playerMessage = message.trim();
 
-    // Load existing conversation
     let conversation = await Conversation.findOne({
       gameSaveId: saveId,
       npcId
@@ -113,32 +119,55 @@ router.post('/:saveId/:npcId/messages', async (req, res) => {
       });
     }
 
-    const playerMessage = message.trim();
-    let npcResponse;
-    let responseSource = 'fallback';
+    // Preserve the existing context for discovery and AI
+    const history = conversation.messages.map(entry => ({
+      role: entry.role,
+      content: entry.content
+    }));
 
-    // Generate AI dialogue when enabled
+    let reply;
+    let source = 'fallback';
+
+    // Add consistent quest context for Garrick
+    const npcContext = npc.toObject();
+
+    if (npc.name === 'Garrick') {
+      npcContext.systemPrompt += `
+
+ADDITIONAL WORLD INFORMATION:
+A merchant shipment belonging to you went missing on
+the forest road three nights ago. It carried ordinary
+supplies, including lantern oil and provisions.
+
+You are worried about the missing driver.
+You may discuss this problem if the player asks
+about local trouble, trade, jobs, or rumors.
+
+If the player offers to help, respond naturally.
+The game server handles official quest acceptance.
+`;
+    }
+
     if (process.env.QWEN_ENABLED === 'true') {
       try {
-        npcResponse = await generateNPCResponse(
-          npc,
+        reply = await generateNPCResponse(
+          npcContext,
           gameSave.playerName,
-          conversation.messages,
+          history,
           playerMessage
         );
 
-        responseSource = 'qwen';
+        source = 'qwen';
       } catch (error) {
         console.error('Qwen generation failed:', error.message);
       }
     }
 
-    // Predefined dialogue if Qwen is unavailable
-    if (!npcResponse) {
-      npcResponse = npc.greeting;
+    if (!reply) {
+      reply = npc.greeting;
     }
 
-    // Store both messages
+    // Save conversation
     conversation.messages.push(
       {
         role: 'user',
@@ -146,19 +175,34 @@ router.post('/:saveId/:npcId/messages', async (req, res) => {
       },
       {
         role: 'assistant',
-        content: npcResponse
+        content: reply
       }
     );
 
     await conversation.save();
 
-    res.status(201).json({
-      npc: npc.name,
-      reply: npcResponse,
-      source: responseSource,
-      messages: conversation.messages
+    // Check whether the conversation reveals a quest
+    const discoveredQuest = await discoverQuest(
+      gameSave._id,
+      npc,
+      playerMessage,
+      history
+    );
+
+    // Retrieve all quest offers for this NPC
+    const quests = await SideQuest.find({
+      gameSaveId: saveId,
+      npcId
     });
 
+    res.status(201).json({
+      npc: npc.name,
+      reply,
+      source,
+      messages: conversation.messages,
+      discoveredQuest,
+      quests
+    });
   } catch (error) {
     console.error('NPC message error:', error);
 
@@ -167,5 +211,57 @@ router.post('/:saveId/:npcId/messages', async (req, res) => {
     });
   }
 });
+
+// POST - Accept a discovered side quest
+router.post('/:saveId/:npcId/quests/:questKey/accept',
+  async (req, res) => {
+    try {
+      const { saveId, npcId, questKey } = req.params;
+
+      const result = await getGameAndNPC(saveId, npcId);
+
+      if (result.error) {
+        return res.status(result.status).json({
+          error: result.error
+        });
+      }
+
+      const quest = await SideQuest.findOneAndUpdate(
+        {
+          gameSaveId: saveId,
+          npcId,
+          questKey,
+          status: 'discovered'
+        },
+        {
+          $set: {
+            status: 'active'
+          }
+        },
+        {
+          new: true,
+          runValidators: true
+        }
+      );
+
+      if (!quest) {
+        return res.status(409).json({
+          error: 'Quest is unavailable or already accepted.'
+        });
+      }
+
+      res.json({
+        message: `Quest accepted: ${quest.title}`,
+        quest
+      });
+    } catch (error) {
+      console.error('Quest acceptance error:', error);
+
+      res.status(500).json({
+        error: 'Failed to accept quest.'
+      });
+    }
+  }
+);
 
 module.exports = router;

@@ -1,0 +1,86 @@
+
+/* Conversation-driven side quests */
+
+.sidequest-notice {
+    background: #263d2b;
+    color: #bce9bd;
+    border-top: 1px solid #65976d;
+    padding: 12px 20px;
+    font-size: 13px;
+  }
+  
+  .sidequest-panel {
+    padding: 12px 20px;
+    border-top: 1px solid #b99a5155;
+    background: #18251c;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  
+  .sidequest-offer {
+    border: 1px solid #8b754b;
+    border-radius: 7px;
+    padding: 15px;
+    background: #202b20;
+  }
+  
+  .sidequest-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    color: #d8b76b;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  
+  .sidequest-status {
+    text-transform: capitalize;
+  }
+  
+  .sidequest-offer h3 {
+    font-family: 'Cinzel', serif;
+    color: #e8dfca;
+    font-size: 16px;
+    margin: 10px 0;
+  }
+  
+  .sidequest-offer p {
+    color: #b9c1b4;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  
+  .sidequest-offer button {
+    margin-top: 10px;
+    padding: 10px 16px;
+    background: #d8b76b;
+    color: #1d211a;
+    border: none;
+    border-radius: 5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  
+  .sidequest-offer button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .sidequest-objectives {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 12px;
+    font-size: 11px;
+    color: #c3c8b8;
+  }
+  
+  @media (max-width: 600px) {
+    .sidequest-panel {
+      max-height: 180px;
+      padding: 10px;
+    }
+  }
+  

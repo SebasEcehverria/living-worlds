@@ -1,6 +1,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import './NPCChat.css'
+import './SideQuests.css'
 
 const npcActions = {
   meet_elden: {
@@ -33,19 +34,23 @@ function NPCChat({
   onClose
 }) {
   const [messages, setMessages] = useState([])
+  const [quests, setQuests] = useState([])
   const [input, setInput] = useState('')
+
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [accepting, setAccepting] = useState(false)
+
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
 
   const messagesEndRef = useRef(null)
   const npcClass = npc.name.toLowerCase()
 
-  const availableAction = npcActions[questStep]
-  const canInteract =
-    availableAction?.npc === npc.name
+  const mainQuestAction = npcActions[questStep]
+  const canInteract = mainQuestAction?.npc === npc.name
 
-  // Load conversation history
+  // Load conversation and quest history
   useEffect(() => {
     let cancelled = false
 
@@ -66,6 +71,7 @@ function NPCChat({
 
         if (!cancelled) {
           setMessages(data.messages || [])
+          setQuests(data.quests || [])
         }
       } catch (err) {
         console.error(err)
@@ -91,7 +97,7 @@ function NPCChat({
     })
   }, [messages])
 
-  // Send AI conversation message
+  // Send message to Qwen
   const sendMessage = async (e) => {
     e.preventDefault()
 
@@ -100,6 +106,7 @@ function NPCChat({
 
     setSending(true)
     setError('')
+    setNotice('')
 
     try {
       const response = await fetch(
@@ -119,13 +126,62 @@ function NPCChat({
 
       const data = await response.json()
 
-      setMessages(data.messages)
+      setMessages(data.messages || [])
+      setQuests(data.quests || [])
       setInput('')
+
+      if (
+        data.discoveredQuest &&
+        data.discoveredQuest.status === 'discovered'
+      ) {
+        setNotice(
+          `New quest discovered: ${data.discoveredQuest.title}`
+        )
+      }
     } catch (err) {
       console.error(err)
-      setError('Could not send message. Try again.')
+      setError('Could not send message. Please try again.')
     } finally {
       setSending(false)
+    }
+  }
+
+  // Accept a discovered side quest
+  const acceptQuest = async (quest) => {
+    if (accepting) return
+
+    setAccepting(true)
+    setError('')
+    setNotice('')
+
+    try {
+      const response = await fetch(
+        `/api/conversations/${gameSaveId}/${npc._id}/quests/${quest.questKey}/accept`,
+        {
+          method: 'POST'
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Could not accept quest')
+      }
+
+      setQuests(current =>
+        current.map(item =>
+          item._id === data.quest._id
+            ? data.quest
+            : item
+        )
+      )
+
+      setNotice(data.message)
+    } catch (err) {
+      console.error(err)
+      setError(err.message)
+    } finally {
+      setAccepting(false)
     }
   }
 
@@ -138,6 +194,7 @@ function NPCChat({
         aria-label={`Conversation with ${npc.name}`}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Character header */}
         <div className="chat-header">
           <div className={`chat-avatar ${npcClass}`}>
             {npc.symbol}
@@ -157,6 +214,7 @@ function NPCChat({
           </button>
         </div>
 
+        {/* Conversation messages */}
         <div className="chat-messages">
           {loading ? (
             <p className="chat-notice">
@@ -206,23 +264,76 @@ function NPCChat({
           )}
         </div>
 
-        {error && (
-          <p className="chat-error">{error}</p>
+        {/* Feedback */}
+        {notice && (
+          <div className="sidequest-notice" role="status">
+            ✦ {notice}
+          </div>
         )}
 
-        {/* Quest interaction */}
+        {error && (
+          <p className="chat-error" role="alert">
+            {error}
+          </p>
+        )}
+
+        {/* Side quests */}
+        {quests.length > 0 && (
+          <div className="sidequest-panel">
+            {quests.map(quest => (
+              <div
+                key={quest._id}
+                className="sidequest-offer"
+              >
+                <div className="sidequest-heading">
+                  <span>✦ SIDE QUEST</span>
+                  <span className="sidequest-status">
+                    {quest.status}
+                  </span>
+                </div>
+
+                <h3>{quest.title}</h3>
+                <p>{quest.description}</p>
+
+                {quest.status === 'discovered' && (
+                  <button
+                    type="button"
+                    disabled={accepting}
+                    onClick={() => acceptQuest(quest)}
+                  >
+                    {accepting ? 'Accepting...' : 'Accept Quest'}
+                  </button>
+                )}
+
+                {quest.status === 'active' && (
+                  <div className="sidequest-objectives">
+                    {quest.objectives.map((objective, index) => (
+                      <div key={index}>
+                        {objective.completed ? '✓' : '○'}
+                        {' '}{objective.description}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Existing main quest action */}
         {canInteract && (
           <div className="quest-chat-action">
             <button
               type="button"
               disabled={sending || loading}
-              onClick={() => onQuestAction(availableAction.action)}
+              onClick={() => onQuestAction(mainQuestAction.action)}
             >
-              {availableAction.label}
+              {mainQuestAction.label}
             </button>
           </div>
         )}
 
+        {/* Player input */}
         <form
           className="chat-input-area"
           onSubmit={sendMessage}
@@ -231,7 +342,7 @@ function NPCChat({
             type="text"
             placeholder={`Speak to ${npc.name}...`}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={e => setInput(e.target.value)}
             maxLength={1000}
             disabled={loading || sending}
           />
