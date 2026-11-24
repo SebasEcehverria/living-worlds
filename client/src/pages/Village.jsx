@@ -1,15 +1,21 @@
 
 import { useEffect, useState } from 'react'
-import './Village.css'
 import NPCChat from '../components/NPCChat'
+import './Village.css'
 
 function Village({ gameSave, onReturnToMenu }) {
+  // NPC information
   const [npcs, setNpcs] = useState([])
   const [selectedNPC, setSelectedNPC] = useState(null)
   const [loadingNPCs, setLoadingNPCs] = useState(true)
   const [npcError, setNpcError] = useState('')
 
-  // Retrieve NPCs from MongoDB through Express
+  // Player inventory
+  const [inventory, setInventory] = useState([])
+  const [inventoryLoading, setInventoryLoading] = useState(true)
+  const [inventoryError, setInventoryError] = useState('')
+
+  // Load NPCs from MongoDB
   useEffect(() => {
     const loadNPCs = async () => {
       setLoadingNPCs(true)
@@ -37,13 +43,53 @@ function Village({ gameSave, onReturnToMenu }) {
     loadNPCs()
   }, [])
 
+  // Load player inventory from MongoDB
+  useEffect(() => {
+    const loadInventory = async () => {
+      setInventoryLoading(true)
+      setInventoryError('')
+
+      try {
+        const response = await fetch(
+          `/api/saves/${gameSave._id}/inventory`
+        )
+
+        if (!response.ok) {
+          throw new Error('Failed to retrieve inventory')
+        }
+
+        const data = await response.json()
+
+        setInventory(data.inventory || [])
+        console.log('Inventory loaded from MongoDB:', data.inventory)
+      } catch (error) {
+        console.error('Inventory loading error:', error)
+        setInventoryError('Could not load inventory.')
+      } finally {
+        setInventoryLoading(false)
+      }
+    }
+
+    loadInventory()
+  }, [gameSave._id])
+
+  // Close the active NPC conversation
+  const closeConversation = () => {
+    setSelectedNPC(null)
+  }
+
   return (
     <div className="village-page">
 
-      {/* Village Header */}
+      {/* ========================= */}
+      {/* VILLAGE HEADER            */}
+      {/* ========================= */}
+
       <div className="village-header">
         <div>
-          <p className="eyebrow">WELCOME TO YOUR ADVENTURE</p>
+          <p className="eyebrow">
+            WELCOME TO YOUR ADVENTURE
+          </p>
 
           <h1>The Talking Village</h1>
 
@@ -60,13 +106,20 @@ function Village({ gameSave, onReturnToMenu }) {
         </button>
       </div>
 
+      {/* ========================= */}
+      {/* MAIN GAME LAYOUT          */}
+      {/* ========================= */}
+
       <div className="game-layout">
 
-        {/* Main Village Area */}
+        {/* MAIN VILLAGE AREA */}
         <section className="village-main">
 
+          {/* Village Introduction */}
           <div className="village-intro">
-            <span className="village-icon">🏰</span>
+            <span className="village-icon">
+              🏰
+            </span>
 
             <h2>Village of Eldermere</h2>
 
@@ -82,17 +135,18 @@ function Village({ gameSave, onReturnToMenu }) {
             </p>
           </div>
 
-          {/* Loading State */}
-          {loadingNPCs && (
+          {/* ========================= */}
+          {/* NPC CARDS                 */}
+          {/* ========================= */}
+
+          {loadingNPCs ? (
             <div className="npc-loading">
               <p>Loading villagers...</p>
             </div>
-          )}
-
-          {/* Error State */}
-          {npcError && (
+          ) : npcError ? (
             <div className="npc-loading">
               <p>{npcError}</p>
+
               <button
                 className="secondary-button"
                 onClick={() => window.location.reload()}
@@ -100,57 +154,66 @@ function Village({ gameSave, onReturnToMenu }) {
                 Try Again
               </button>
             </div>
-          )}
+          ) : (
+            <>
+              <div className="npc-grid">
 
-          {/* MongoDB NPC Cards */}
-          {!loadingNPCs && !npcError && (
-            <div className="npc-grid">
-              {npcs.map((npc) => {
-                const npcClass = npc.name.toLowerCase()
+                {npcs.map((npc) => {
+                  const npcClass = npc.name.toLowerCase()
 
-                return (
-                  <button
-                    key={npc._id}
-                    className="npc-card"
-                    onClick={() => setSelectedNPC(npc)}
-                  >
-                    <div className={`npc-art ${npcClass}`}>
-                      <span>{npc.symbol}</span>
-                    </div>
+                  return (
+                    <button
+                      key={npc._id}
+                      className="npc-card"
+                      onClick={() => setSelectedNPC(npc)}
+                    >
 
-                    <div className="npc-info">
-                      <span className="npc-location">
-                        {npc.location}
-                      </span>
+                      {/* NPC Artwork */}
+                      <div className={`npc-art ${npcClass}`}>
+                        <span>{npc.symbol}</span>
+                      </div>
 
-                      <h3>{npc.name}</h3>
+                      {/* NPC Information */}
+                      <div className="npc-info">
 
-                      <p className="npc-title">
-                        {npc.title}
-                      </p>
+                        <span className="npc-location">
+                          {npc.location}
+                        </span>
 
-                      <span className="npc-action">
-                        Speak with {npc.name} →
-                      </span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
+                        <h3>{npc.name}</h3>
 
-          {!loadingNPCs && !npcError && npcs.length === 0 && (
-            <p className="npc-loading">
-              No villagers were found.
-            </p>
+                        <p className="npc-title">
+                          {npc.title}
+                        </p>
+
+                        <span className="npc-action">
+                          Speak with {npc.name} →
+                        </span>
+
+                      </div>
+                    </button>
+                  )
+                })}
+
+              </div>
+
+              {npcs.length === 0 && (
+                <div className="npc-loading">
+                  <p>No villagers were found.</p>
+                </div>
+              )}
+            </>
           )}
 
         </section>
 
-        {/* Player Sidebar */}
+        {/* ========================= */}
+        {/* GAME SIDEBAR              */}
+        {/* ========================= */}
+
         <aside className="game-sidebar">
 
-          {/* Player Information */}
+          {/* PLAYER INFORMATION */}
           <div className="sidebar-panel">
             <h3>⚔ Adventurer</h3>
 
@@ -165,47 +228,102 @@ function Village({ gameSave, onReturnToMenu }) {
             </p>
           </div>
 
-          {/* Quest Journal */}
+          {/* ========================= */}
+          {/* QUEST JOURNAL             */}
+          {/* ========================= */}
+
           <div className="sidebar-panel">
             <h3>📜 Quest Journal</h3>
 
             <p className="sidebar-description">
-              Your adventure has only just begun.
-              Explore the village and meet its inhabitants.
+              {gameSave.questStatus === 'not_started'
+                ? 'Your adventure has only just begun. Explore the village and meet its inhabitants.'
+                : gameSave.questStatus === 'active'
+                ? 'The Whispering Forest quest is active. Investigate the mysterious activity surrounding Eldermere.'
+                : 'The Whispering Forest quest has been completed!'}
             </p>
 
             <div className="quest-status">
               Quest: {gameSave.questStatus.replaceAll('_', ' ')}
             </div>
+
+            {gameSave.questStatus === 'active' && (
+              <div className="quest-objective">
+                <strong>Current Quest</strong>
+                <p>The Whispering Forest</p>
+
+                <span>
+                  Investigate the forest and uncover its secrets.
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* Inventory */}
+          {/* ========================= */}
+          {/* PLAYER INVENTORY          */}
+          {/* ========================= */}
+
           <div className="sidebar-panel">
             <h3>🎒 Inventory</h3>
 
-            {gameSave.inventory.length === 0 ? (
+            {inventoryLoading ? (
+              <p className="sidebar-description">
+                Loading inventory...
+              </p>
+            ) : inventoryError ? (
+              <p className="sidebar-description">
+                {inventoryError}
+              </p>
+            ) : inventory.length === 0 ? (
               <p className="sidebar-description">
                 Your inventory is empty.
               </p>
             ) : (
-              <p className="sidebar-description">
-                You have {gameSave.inventory.length} items.
-              </p>
+              <div className="inventory-list">
+
+                {inventory.map((item) => (
+                  <div
+                    key={item._id}
+                    className="inventory-item"
+                    title={item.description}
+                  >
+
+                    <span className="inventory-symbol">
+                      {item.symbol}
+                    </span>
+
+                    <div className="inventory-details">
+                      <strong>{item.name}</strong>
+
+                      <span>
+                        {item.questItem
+                          ? 'Quest Item'
+                          : item.type}
+                      </span>
+                    </div>
+
+                  </div>
+                ))}
+
+              </div>
             )}
+
           </div>
 
         </aside>
       </div>
 
-      {/* Interactive NPC Chat */}
+      {/* ========================= */}
+      {/* AI NPC CONVERSATION       */}
+      {/* ========================= */}
+
       {selectedNPC && (
         <NPCChat
           npc={selectedNPC}
           gameSaveId={gameSave._id}
-          onClose={() => setSelectedNPC(null)}
+          onClose={closeConversation}
         />
       )}
-      
 
     </div>
   )

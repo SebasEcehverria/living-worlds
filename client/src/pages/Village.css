@@ -305,5 +305,53 @@
       color: #d8b76b;
        font-family: 'Cinzel', serif;
     }
+
+
+    /* Inventory Items */
+
+    .inventory-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+  
+    .inventory-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #101b14;
+      border: 1px solid #526447;
+      border-radius: 6px;
+      padding: 12px;
+      transition: border-color 0.2s;
+    }
+  
+    .inventory-item:hover {
+      border-color: #d8b76b;
+    }
+  
+    .inventory-symbol {
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+  
+    .inventory-details {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 0;
+    }
+  
+    .inventory-details strong {
+      color: #e8dfca;
+      font-size: 12px;
+    }
+  
+    .inventory-details span {
+      color: #d8b76b;
+      font-size: 10px;
+      text-transform: capitalize;
+    }
+  
   }
   
