@@ -19,6 +19,10 @@ app.use('/api/saves', saveRoutes);
 const npcRoutes = require('./routes/npcs');
 app.use('/api/npcs', npcRoutes);
 
+// Conversation routes
+const conversationRoutes = require('./routes/conversations');
+app.use('/api/conversations', conversationRoutes);
+
 // Home route
 app.get('/', (req, res) => {
   res.json({

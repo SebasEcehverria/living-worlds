@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import './Village.css'
+import NPCChat from '../components/NPCChat'
 
 function Village({ gameSave, onReturnToMenu }) {
   const [npcs, setNpcs] = useState([])
@@ -196,68 +197,15 @@ function Village({ gameSave, onReturnToMenu }) {
         </aside>
       </div>
 
-      {/* NPC Dialogue Window */}
+      {/* Interactive NPC Chat */}
       {selectedNPC && (
-        <div
-          className="npc-modal-overlay"
-          onClick={() => setSelectedNPC(null)}
-        >
-          <div
-            className="npc-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="npc-dialog-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-
-            <button
-              className="modal-close"
-              onClick={() => setSelectedNPC(null)}
-              aria-label="Close conversation"
-            >
-              ✕
-            </button>
-
-            <div
-              className={`modal-portrait ${selectedNPC.name.toLowerCase()}`}
-            >
-              {selectedNPC.symbol}
-            </div>
-
-            <p className="eyebrow">
-              {selectedNPC.location}
-            </p>
-
-            <h2 id="npc-dialog-title">
-              {selectedNPC.name}
-            </h2>
-
-            <p className="npc-title">
-              {selectedNPC.title}
-            </p>
-
-            <p className="npc-description">
-              {selectedNPC.description}
-            </p>
-
-            <div className="npc-dialogue">
-              "{selectedNPC.greeting}"
-            </div>
-
-            <p className="npc-coming-soon">
-              AI conversations coming soon
-            </p>
-
-            <button
-              className="primary-button"
-              onClick={() => setSelectedNPC(null)}
-            >
-              Farewell
-            </button>
-
-          </div>
-        </div>
+        <NPCChat
+          npc={selectedNPC}
+          gameSaveId={gameSave._id}
+          onClose={() => setSelectedNPC(null)}
+        />
       )}
+      
 
     </div>
   )
